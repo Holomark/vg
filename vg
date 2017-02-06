@@ -1,0 +1,133 @@
+#!/bin/bash
+set -e
+set -o nounset
+
+INITAL_SNAPSHOT_NAME="initial-state"
+
+usage() {
+	cat <<-USAGE
+		Usage: vg <vg-command>|<vagrant command>" [args]...
+
+		vg is a wrapper script for the vagrant command. This is used as a shortcut and also adds some convenient options for commons operations.
+
+		Commands
+		  rebuild             Destroy the current vagrant box, the cache directory and re-up it
+		  restart             Halt and Up the vagrant box
+		  global-halt         Halt all running vagrant boxes
+		  global-suspend      Suspend all running vagrant boxes
+		  go									Up the machine and connect immediatly to it
+		  safe-up							Up the machine whithout provision, get a snapshot of the inital state
+			                    called '${INITAL_SNAPSHOT_NAME}' and finally launch the provisionning
+		  initial             Restore the snapshot '${INITAL_SNAPSHOT_NAME}'
+		  redo-provision      Restore the snapshot '${INITAL_SNAPSHOT_NAME}' and start provision
+		  <vagrant command>   Any other command will be forwarded to the vagrant command as is
+
+
+		The help for the original vagrant command follows
+
+		============================================================================
+
+	USAGE
+
+	vagrant help
+}
+
+main() {
+	if [[ $# -eq 0 ]]
+	then
+		usage
+		exit 1
+	fi
+
+	local action="${1}"
+
+	case $action in
+		"help")	usage
+						;;
+		"rebuild") echo "Rebuilding ..."
+						rebuild-vm
+						;;
+		"restart") echo "Restarting ..."
+						restart-vm
+						;;
+		"global-halt") echo "Halting all running VMs"
+						global-halt
+						;;
+		"global-suspend") echo "Suspending all running VMs"
+						global-suspend
+						;;
+		"go") echo "Start the VM and try to connect"
+						go
+						;;
+		"safe-up") echo "Start the VM, save its state and provision"
+						safe-up
+						;;
+		"initial") echo "Restore the initial saved state"
+						initial
+						;;
+		"redo-provision") echo "Restore the initial state and provision the machine"
+						redo-provision
+						;;
+		*) vagrant $@
+	esac
+}
+
+# Destroy all the vm and all related files then rebuild it
+rebuild-vm() {
+	if [[ ! -d "./.vagrant" ]]
+	then
+	    echo ".vagrant directory not present. Nothing to do"
+	    exit 1
+	fi
+
+	vagrant destroy -f
+	rm -rf .vagrant
+	vagrant up
+}
+
+#
+restart-vm() {
+	vagrant halt
+	vagrant up
+}
+
+global-command-on-running-vm() {
+	local command=$1
+
+	local IDS=($(vagrant global-status | sed 1,2d | grep -e 'running' | cut -f1 -d ' ' | tr '\n' ' '))
+
+	for id in ${IDS[@]}
+	do
+		vagrant ${command} ${id}
+	done
+}
+
+global-halt() {
+	global-command-on-running-vm "halt"
+}
+
+global-suspend() {
+	global-command-on-running-vm "suspend"
+}
+
+go() {
+	vagrant up
+	vagrant ssh
+}
+
+safe-up() {
+	vagrant up --no-provision
+	vagrant snapshot save "${INITAL_SNAPSHOT_NAME}"
+	vagrant provision
+}
+
+initial() {
+	vagrant snapshot restore "${INITAL_SNAPSHOT_NAME}" --no-provision
+}
+
+redo-provision() {
+	initial
+	vagrant provision
+}
+
+main $@
