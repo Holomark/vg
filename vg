@@ -12,6 +12,7 @@ usage() {
 
 		Commands
 		  rebuild             Destroy the current vagrant box, the cache directory and re-up it
+		  safe-rebuild       	Destroy the current vagrant box, the cache directory and re-up it with safe-up
 		  restart             Halt and Up the vagrant box
 		  global-halt         Halt all running vagrant boxes
 		  global-suspend      Suspend all running vagrant boxes
@@ -46,6 +47,9 @@ main() {
 						;;
 		"rebuild") echo "Rebuilding ..."
 						rebuild-vm
+						;;
+		"rebuild-safe") echo "Rebuilding ..."
+						rebuild-safe-vm
 						;;
 		"restart") echo "Restarting ..."
 						restart-vm
@@ -83,6 +87,18 @@ rebuild-vm() {
 	vagrant destroy -f
 	rm -rf .vagrant
 	vagrant up
+}
+
+rebuild-safe-vm() {
+	if [[ ! -d "./.vagrant" ]]
+	then
+	    echo ".vagrant directory not present. Nothing to do"
+	    exit 1
+	fi
+
+	vagrant destroy -f
+	rm -rf .vagrant
+	safe-up
 }
 
 #
