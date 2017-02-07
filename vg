@@ -72,7 +72,8 @@ main() {
 		"redo-provision") echo "Restore the initial state and provision the machine"
 						redo-provision
 						;;
-		*) vagrant $@
+		*) echo "Fallback to regular vagrant command 'vagrant $@'"
+						vagrant "$@"
 	esac
 }
 
@@ -146,4 +147,4 @@ redo-provision() {
 	vagrant provision
 }
 
-main $@
+main "$@"
