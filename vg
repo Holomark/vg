@@ -120,11 +120,15 @@ global-command-on-running-vm() {
 	local command=$1
 
 	local IDS=($(vagrant global-status | sed 1,2d | grep -e 'running' | cut -f1 -d ' ' | tr '\n' ' '))
-
-	for id in ${IDS[@]}
-	do
+        if [[ ${#IDS[@]} -gt 0 ]]
+        then
+	    for id in ${IDS[@]}
+	    do
 		vagrant ${command} ${id}
-	done
+	    done
+        else
+            echo "No running VMs"
+        fi
 }
 
 global-halt() {
